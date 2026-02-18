@@ -8,8 +8,31 @@ export function byLatestRevision(a: Revision, b: Revision) {
   return new Date(b.date).getTime() - new Date(a.date).getTime()
 }
 
-export function normalizeRevisions(revisions: Revision[]) {
-  return [...revisions].sort(byLatestRevision)
+function isRevision(value: unknown): value is Revision {
+  if (!value || typeof value !== 'object') return false
+  const candidate = value as Partial<Revision>
+  return (
+    typeof candidate.version === 'string' &&
+    typeof candidate.image === 'string' &&
+    typeof candidate.date === 'string' &&
+    typeof candidate.description === 'string'
+  )
+}
+
+export function normalizeRevisions(revisions: unknown): Revision[] {
+  const revisionList = Array.isArray(revisions)
+    ? revisions
+    : revisions && typeof revisions === 'object'
+      ? Object.values(revisions as Record<string, unknown>)
+      : []
+
+  return revisionList
+    .filter(isRevision)
+    .map((revision) => ({
+      ...revision,
+      changes: Array.isArray(revision.changes) ? revision.changes : [],
+    }))
+    .sort(byLatestRevision)
 }
 
 export function toDrawingUrl(fileName: string) {
