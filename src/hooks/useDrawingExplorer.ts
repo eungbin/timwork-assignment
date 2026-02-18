@@ -1,6 +1,26 @@
-import { useEffect, useMemo, useState } from 'react'
-import type { DisciplineData, Drawing, Metadata, OverlayLayer, Revision } from '../types/drawing'
-import { getOverlayTransform, normalizeRevisions, toDrawingUrl } from '../utils/drawing'
+import { useMemo, useReducer } from 'react'
+import type { Drawing, Metadata, OverlayLayer, Revision } from '../types/drawing'
+import { explorerReducer, initialExplorerSelectionState } from './drawingExplorerReducer'
+import {
+  getBaseImage,
+  getBaseImageUrl,
+  getDisciplineNames,
+  getEffectiveOverlayDisciplines,
+  getEffectiveSelectedDisciplineName,
+  getEffectiveSelectedRegionName,
+  getEffectiveSelectedRevisionVersion,
+  getEffectiveSelectedSpaceId,
+  getLatestRevision,
+  getOverlayCandidates,
+  getOverlayLayers,
+  getRegionNames,
+  getRevisionCandidates,
+  getRootDrawing,
+  getSelectedDiscipline,
+  getSelectedRevision,
+  getSelectedSpace,
+  getSpaces,
+} from './drawingExplorerSelectors'
 
 type ExplorerResult = {
   rootDrawing: Drawing | null
@@ -27,156 +47,79 @@ type ExplorerResult = {
   toggleOverlayDiscipline: (disciplineName: string) => void
 }
 
-function getLatestRevisionFromDiscipline(discipline: DisciplineData) {
-  return normalizeRevisions(discipline.revisions)[0]
-}
-
 export function useDrawingExplorer(metadata: Metadata | null): ExplorerResult {
-  const [selectedSpaceId, setSelectedSpaceId] = useState<string | null>(null)
-  const [selectedDisciplineName, setSelectedDisciplineName] = useState<string | null>(null)
-  const [selectedRegionName, setSelectedRegionName] = useState<string | null>(null)
-  const [selectedRevisionVersion, setSelectedRevisionVersion] = useState<string | null>(null)
-  const [overlayDisciplines, setOverlayDisciplines] = useState<string[]>([])
+  const [state, dispatch] = useReducer(explorerReducer, initialExplorerSelectionState)
 
-  const rootDrawing = useMemo(() => {
-    if (!metadata) return null
-    return Object.values(metadata.drawings).find((drawing) => drawing.parent === null) ?? null
-  }, [metadata])
-
-  const spaces = useMemo(() => {
-    if (!metadata || !rootDrawing) return []
-    return Object.values(metadata.drawings)
-      .filter((drawing) => drawing.parent === rootDrawing.id)
-      .sort((a, b) => a.id.localeCompare(b.id))
-  }, [metadata, rootDrawing])
-
-  const selectedSpace = useMemo(
-    () => spaces.find((space) => space.id === selectedSpaceId) ?? null,
-    [spaces, selectedSpaceId],
+  const rootDrawing = useMemo(() => getRootDrawing(metadata), [metadata])
+  const spaces = useMemo(() => getSpaces(metadata, rootDrawing), [metadata, rootDrawing])
+  const selectedSpaceId = useMemo(
+    () => getEffectiveSelectedSpaceId(spaces, state.selectedSpaceId),
+    [spaces, state.selectedSpaceId],
   )
-
-  const disciplineNames = useMemo(
-    () => (selectedSpace?.disciplines ? Object.keys(selectedSpace.disciplines) : []),
-    [selectedSpace],
+  const selectedSpace = useMemo(() => getSelectedSpace(spaces, selectedSpaceId), [spaces, selectedSpaceId])
+  const disciplineNames = useMemo(() => getDisciplineNames(selectedSpace), [selectedSpace])
+  const selectedDisciplineName = useMemo(
+    () => getEffectiveSelectedDisciplineName(disciplineNames, state.selectedDisciplineName),
+    [disciplineNames, state.selectedDisciplineName],
   )
-
-  const selectedDiscipline = useMemo(() => {
-    if (!selectedSpace?.disciplines || !selectedDisciplineName) return null
-    return selectedSpace.disciplines[selectedDisciplineName] ?? null
-  }, [selectedDisciplineName, selectedSpace])
-
-  const regionNames = useMemo(
-    () => (selectedDiscipline?.regions ? Object.keys(selectedDiscipline.regions) : []),
-    [selectedDiscipline],
+  const selectedDiscipline = useMemo(
+    () => getSelectedDiscipline(selectedSpace, selectedDisciplineName),
+    [selectedDisciplineName, selectedSpace],
   )
-
-  const revisionCandidates = useMemo(() => {
-    if (!selectedDiscipline) return []
-    if (selectedRegionName && selectedDiscipline.regions?.[selectedRegionName]) {
-      return normalizeRevisions(selectedDiscipline.regions[selectedRegionName].revisions)
-    }
-    return normalizeRevisions(selectedDiscipline.revisions)
-  }, [selectedDiscipline, selectedRegionName])
-
+  const regionNames = useMemo(() => getRegionNames(selectedDiscipline), [selectedDiscipline])
+  const selectedRegionName = useMemo(
+    () => getEffectiveSelectedRegionName(regionNames, state.selectedRegionName),
+    [regionNames, state.selectedRegionName],
+  )
+  const revisionCandidates = useMemo(
+    () => getRevisionCandidates(selectedDiscipline, selectedRegionName),
+    [selectedDiscipline, selectedRegionName],
+  )
+  const selectedRevisionVersion = useMemo(
+    () => getEffectiveSelectedRevisionVersion(revisionCandidates, state.selectedRevisionVersion),
+    [revisionCandidates, state.selectedRevisionVersion],
+  )
   const selectedRevision = useMemo(
-    () =>
-      revisionCandidates.find((revision) => revision.version === selectedRevisionVersion) ??
-      revisionCandidates[0] ??
-      null,
+    () => getSelectedRevision(revisionCandidates, selectedRevisionVersion),
     [revisionCandidates, selectedRevisionVersion],
   )
-
-  const latestRevision = revisionCandidates[0] ?? null
-  const baseImage = selectedRevision?.image ?? selectedDiscipline?.image ?? selectedSpace?.image ?? null
-  const baseImageUrl = baseImage ? toDrawingUrl(baseImage) : null
-
+  const latestRevision = useMemo(() => getLatestRevision(revisionCandidates), [revisionCandidates])
+  const baseImage = useMemo(
+    () => getBaseImage(selectedRevision, selectedDiscipline, selectedSpace),
+    [selectedDiscipline, selectedRevision, selectedSpace],
+  )
+  const baseImageUrl = useMemo(() => getBaseImageUrl(baseImage), [baseImage])
   const overlayCandidates = useMemo(
-    () => disciplineNames.filter((name) => name !== selectedDisciplineName),
+    () => getOverlayCandidates(disciplineNames, selectedDisciplineName),
     [disciplineNames, selectedDisciplineName],
   )
-
-  const overlayLayers = useMemo(() => {
-    if (!selectedSpace?.disciplines || !baseImage) return []
-
-    return overlayDisciplines
-      .map((disciplineName) => {
-        const discipline = selectedSpace.disciplines?.[disciplineName]
-        if (!discipline) return null
-
-        const latestOverlayRevision = getLatestRevisionFromDiscipline(discipline)
-        const image = latestOverlayRevision?.image ?? discipline.image
-        if (!image || image === baseImage) return null
-
-        const imageTransform = latestOverlayRevision?.imageTransform ?? discipline.imageTransform
-        return {
-          disciplineName,
-          imageUrl: toDrawingUrl(image),
-          transform: getOverlayTransform(imageTransform),
-        }
-      })
-      .filter((layer): layer is OverlayLayer => layer !== null)
-  }, [baseImage, overlayDisciplines, selectedSpace])
-
-  useEffect(() => {
-    if (!spaces.length) return
-    if (!selectedSpaceId || !spaces.some((space) => space.id === selectedSpaceId)) {
-      setSelectedSpaceId(spaces[0].id)
-    }
-  }, [selectedSpaceId, spaces])
-
-  useEffect(() => {
-    if (!disciplineNames.length) return
-    if (!selectedDisciplineName || !disciplineNames.includes(selectedDisciplineName)) {
-      setSelectedDisciplineName(disciplineNames[0])
-      setOverlayDisciplines([])
-    }
-  }, [disciplineNames, selectedDisciplineName])
-
-  useEffect(() => {
-    if (!regionNames.length) {
-      setSelectedRegionName(null)
-      return
-    }
-    if (!selectedRegionName || !regionNames.includes(selectedRegionName)) {
-      setSelectedRegionName(regionNames[0])
-    }
-  }, [regionNames, selectedRegionName])
-
-  useEffect(() => {
-    if (!revisionCandidates.length) {
-      setSelectedRevisionVersion(null)
-      return
-    }
-    if (!selectedRevisionVersion || !revisionCandidates.some((revision) => revision.version === selectedRevisionVersion)) {
-      setSelectedRevisionVersion(revisionCandidates[0].version)
-    }
-  }, [revisionCandidates, selectedRevisionVersion])
+  const overlayDisciplines = useMemo(
+    () => getEffectiveOverlayDisciplines(state.overlayDisciplines, overlayCandidates),
+    [overlayCandidates, state.overlayDisciplines],
+  )
+  const overlayLayers = useMemo(
+    () => getOverlayLayers(selectedSpace, overlayDisciplines, baseImage),
+    [baseImage, overlayDisciplines, selectedSpace],
+  )
 
   function handleSelectSpace(spaceId: string) {
-    setSelectedSpaceId(spaceId)
-    setOverlayDisciplines([])
+    dispatch({ type: 'SPACE_SELECTED', spaceId })
   }
 
   function handleSelectDiscipline(disciplineName: string) {
-    setSelectedDisciplineName(disciplineName)
-    setOverlayDisciplines([])
+    dispatch({ type: 'DISCIPLINE_SELECTED', disciplineName })
   }
 
   function handleSelectRegion(regionName: string) {
-    setSelectedRegionName(regionName)
+    dispatch({ type: 'REGION_SELECTED', regionName })
   }
 
   function handleSelectRevision(version: string) {
-    setSelectedRevisionVersion(version)
+    dispatch({ type: 'REVISION_SELECTED', version })
   }
 
   function toggleOverlayDiscipline(disciplineName: string) {
-    setOverlayDisciplines((prev) => {
-      if (prev.includes(disciplineName)) {
-        return prev.filter((name) => name !== disciplineName)
-      }
-      return [...prev, disciplineName]
-    })
+    dispatch({ type: 'OVERLAY_TOGGLED', disciplineName })
   }
 
   return {

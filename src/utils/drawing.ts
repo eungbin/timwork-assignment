@@ -42,7 +42,7 @@ export function toDrawingUrl(fileName: string) {
 export function getOverlayTransform(transform?: Transform) {
   if (!transform) return undefined
 
-  // 원본 좌표의 절대값이 커서 프로토타입에서는 기준점 대비 오프셋만 반영합니다.
+  // 원본 좌표의 절대값이 커서 프로토타입에서는 기준점 대비 오프셋만 반영
   const xOffset = (transform.x - TRANSFORM_BASE_X) / 40
   const yOffset = (transform.y - TRANSFORM_BASE_Y) / 40
   return `translate(${xOffset}px, ${yOffset}px) scale(${transform.scale}) rotate(${transform.rotation}rad)`

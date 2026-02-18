@@ -1,4 +1,5 @@
 import type { Drawing, Revision } from '../types/drawing'
+import { SpaceSelectorSection } from './SpaceSelectorSection'
 
 type ExplorerPanelProps = {
   spaces: Drawing[]
@@ -60,19 +61,7 @@ export function ExplorerPanel({
     <aside className="overflow-auto rounded-[10px] border border-slate-200 bg-white p-3.5 shadow-sm">
       <h1 className="mb-3.5 text-lg font-semibold">도면 탐색</h1>
 
-      <section className="mb-4.5">
-        <h2 className="mb-2 text-sm font-semibold">공간</h2>
-        <div className="flex flex-wrap gap-2">
-          {spaces.map((space) => (
-            <Chip
-              key={space.id}
-              label={space.name}
-              active={selectedSpaceId === space.id}
-              onClick={() => onSelectSpace(space.id)}
-            />
-          ))}
-        </div>
-      </section>
+      <SpaceSelectorSection spaces={spaces} selectedSpaceId={selectedSpaceId} onSelectSpace={onSelectSpace} />
 
       <section className="mb-4.5">
         <h2 className="mb-2 text-sm font-semibold">공종</h2>
