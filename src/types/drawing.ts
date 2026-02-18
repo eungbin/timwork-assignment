@@ -59,4 +59,7 @@ export type OverlayLayer = {
   disciplineName: string
   imageUrl: string
   transform: string | undefined
+  imageTransform?: Transform
+  opacity?: number
+  blendMode?: 'normal' | 'multiply'
 }

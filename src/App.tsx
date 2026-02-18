@@ -24,6 +24,7 @@ function App() {
     overlayCandidates,
     overlayDisciplines,
     overlayLayers,
+    hideBaseImage,
     setSelectedSpaceId,
     setSelectedDisciplineName,
     setSelectedRegionName,
@@ -71,6 +72,7 @@ function App() {
         baseImageName={baseImage}
         baseImageUrl={baseImageUrl}
         overlayLayers={overlayLayers}
+        hideBaseImage={hideBaseImage}
       />
 
       <ContextPanel

@@ -4,6 +4,7 @@ import { explorerReducer, initialExplorerSelectionState } from './drawingExplore
 import {
   getBaseImage,
   getBaseImageUrl,
+  getDefaultRegionOverlayLayer,
   getDisciplineNames,
   getEffectiveOverlayDisciplines,
   getEffectiveSelectedDisciplineName,
@@ -40,6 +41,7 @@ type ExplorerResult = {
   overlayCandidates: string[]
   overlayDisciplines: string[]
   overlayLayers: OverlayLayer[]
+  hideBaseImage: boolean
   setSelectedSpaceId: (spaceId: string) => void
   setSelectedDisciplineName: (disciplineName: string) => void
   setSelectedRegionName: (regionName: string) => void
@@ -88,6 +90,7 @@ export function useDrawingExplorer(metadata: Metadata | null): ExplorerResult {
     () => getBaseImage(selectedRevision, selectedDiscipline, selectedSpace),
     [selectedDiscipline, selectedRevision, selectedSpace],
   )
+
   const baseImageUrl = useMemo(() => getBaseImageUrl(baseImage), [baseImage])
   const overlayCandidates = useMemo(
     () => getOverlayCandidates(disciplineNames, selectedDisciplineName),
@@ -97,10 +100,30 @@ export function useDrawingExplorer(metadata: Metadata | null): ExplorerResult {
     () => getEffectiveOverlayDisciplines(state.overlayDisciplines, overlayCandidates),
     [overlayCandidates, state.overlayDisciplines],
   )
-  const overlayLayers = useMemo(
+  const disciplineOverlayLayers = useMemo(
     () => getOverlayLayers(selectedSpace, overlayDisciplines, baseImage),
     [baseImage, overlayDisciplines, selectedSpace],
   )
+  const defaultRegionOverlayLayer = useMemo(
+    () =>
+      getDefaultRegionOverlayLayer(
+        selectedDisciplineName,
+        selectedRegionName,
+        selectedDiscipline,
+        selectedRevision,
+        baseImage,
+      ),
+    [baseImage, selectedDiscipline, selectedDisciplineName, selectedRegionName, selectedRevision],
+  )
+  const isRegionIsolatedMode = useMemo(
+    () => !!selectedRegionName && !!selectedDiscipline?.regions?.[selectedRegionName],
+    [selectedDiscipline, selectedRegionName],
+  )
+  const overlayLayers = useMemo(() => {
+    if (!isRegionIsolatedMode) return disciplineOverlayLayers
+    if (!defaultRegionOverlayLayer) return disciplineOverlayLayers
+    return [defaultRegionOverlayLayer, ...disciplineOverlayLayers]
+  }, [defaultRegionOverlayLayer, disciplineOverlayLayers, isRegionIsolatedMode])
 
   function handleSelectSpace(spaceId: string) {
     dispatch({ type: 'SPACE_SELECTED', spaceId })
@@ -140,6 +163,7 @@ export function useDrawingExplorer(metadata: Metadata | null): ExplorerResult {
     overlayCandidates,
     overlayDisciplines,
     overlayLayers,
+    hideBaseImage: isRegionIsolatedMode,
     setSelectedSpaceId: handleSelectSpace,
     setSelectedDisciplineName: handleSelectDiscipline,
     setSelectedRegionName: handleSelectRegion,

@@ -1,5 +1,5 @@
 import type { DisciplineData, Drawing, Metadata, OverlayLayer, Revision } from '../types/drawing'
-import { getOverlayTransform, normalizeRevisions, toDrawingUrl } from '../utils/drawing'
+import { normalizeRevisions, toDrawingUrl } from '../utils/drawing'
 
 function getLatestRevisionFromDiscipline(discipline: DisciplineData) {
   return normalizeRevisions(discipline.revisions)[0]
@@ -106,6 +106,9 @@ export function getBaseImage(
   selectedDiscipline: DisciplineData | null,
   selectedSpace: Drawing | null,
 ): string | null {
+  if (selectedDiscipline?.regions && selectedDiscipline.image) {
+    return selectedDiscipline.image
+  }
   return selectedRevision?.image ?? selectedDiscipline?.image ?? selectedSpace?.image ?? null
 }
 
@@ -135,7 +138,7 @@ export function getOverlayLayers(
   if (!selectedSpace?.disciplines || !baseImage) return []
 
   return overlayDisciplines
-    .map((disciplineName) => {
+    .map((disciplineName): OverlayLayer | null => {
       const discipline = selectedSpace.disciplines?.[disciplineName]
       if (!discipline) return null
 
@@ -144,11 +147,42 @@ export function getOverlayLayers(
       if (!image || image === baseImage) return null
 
       const imageTransform = latestOverlayRevision?.imageTransform ?? discipline.imageTransform
+      const isTransformCompatible =
+        !imageTransform || !imageTransform.relativeTo || imageTransform.relativeTo === baseImage
       return {
         disciplineName,
         imageUrl: toDrawingUrl(image),
-        transform: getOverlayTransform(imageTransform),
+        transform: undefined,
+        imageTransform: isTransformCompatible ? imageTransform : undefined,
+        opacity: 0.45,
+        blendMode: 'multiply',
       }
     })
     .filter((layer): layer is OverlayLayer => layer !== null)
 }
+
+export function getDefaultRegionOverlayLayer(
+  selectedDisciplineName: string | null,
+  selectedRegionName: string | null,
+  selectedDiscipline: DisciplineData | null,
+  selectedRevision: Revision | null,
+  baseImage: string | null,
+): OverlayLayer | null {
+  if (!selectedDisciplineName || !selectedRegionName) return null
+  if (!selectedDiscipline?.regions?.[selectedRegionName]) return null
+  if (!selectedRevision?.image || !baseImage) return null
+
+  const revisionTransform = selectedRevision.imageTransform
+  const isTransformCompatible =
+    !!revisionTransform && (revisionTransform.relativeTo ? revisionTransform.relativeTo === baseImage : true)
+
+  return {
+    disciplineName: `${selectedDisciplineName} Region ${selectedRegionName}`,
+    imageUrl: toDrawingUrl(selectedRevision.image),
+    transform: undefined,
+    imageTransform: isTransformCompatible ? revisionTransform : undefined,
+    opacity: 1,
+    blendMode: 'normal',
+  }
+}
+

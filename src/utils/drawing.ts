@@ -4,6 +4,13 @@ const DRAWING_BASE_PATH = '/timwork/data/drawings'
 const TRANSFORM_BASE_X = 2481
 const TRANSFORM_BASE_Y = 1754
 
+type OverlayTransformContext = {
+  baseNaturalWidth: number
+  baseNaturalHeight: number
+  baseRenderedWidth: number
+  baseRenderedHeight: number
+}
+
 export function byLatestRevision(a: Revision, b: Revision) {
   return new Date(b.date).getTime() - new Date(a.date).getTime()
 }
@@ -39,11 +46,15 @@ export function toDrawingUrl(fileName: string) {
   return `${DRAWING_BASE_PATH}/${encodeURIComponent(fileName)}`
 }
 
-export function getOverlayTransform(transform?: Transform) {
+export function getOverlayTransform(transform?: Transform, context?: OverlayTransformContext) {
   if (!transform) return undefined
 
-  // 원본 좌표의 절대값이 커서 프로토타입에서는 기준점 대비 오프셋만 반영
-  const xOffset = (transform.x - TRANSFORM_BASE_X) / 40
-  const yOffset = (transform.y - TRANSFORM_BASE_Y) / 40
+  const centerX = context ? context.baseNaturalWidth / 2 : TRANSFORM_BASE_X
+  const centerY = context ? context.baseNaturalHeight / 2 : TRANSFORM_BASE_Y
+  const xScale = context ? context.baseRenderedWidth / context.baseNaturalWidth : 1 / 40
+  const yScale = context ? context.baseRenderedHeight / context.baseNaturalHeight : 1 / 40
+
+  const xOffset = (transform.x - centerX) * xScale
+  const yOffset = (transform.y - centerY) * yScale
   return `translate(${xOffset}px, ${yOffset}px) scale(${transform.scale}) rotate(${transform.rotation}rad)`
 }
