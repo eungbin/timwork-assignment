@@ -147,13 +147,12 @@ export function getOverlayLayers(
       if (!image || image === baseImage) return null
 
       const imageTransform = latestOverlayRevision?.imageTransform ?? discipline.imageTransform
-      const isTransformCompatible =
-        !imageTransform || !imageTransform.relativeTo || imageTransform.relativeTo === baseImage
       return {
         disciplineName,
+        imageName: image,
         imageUrl: toDrawingUrl(image),
         transform: undefined,
-        imageTransform: isTransformCompatible ? imageTransform : undefined,
+        imageTransform,
         opacity: 0.45,
         blendMode: 'multiply',
       }
@@ -178,6 +177,7 @@ export function getDefaultRegionOverlayLayer(
 
   return {
     disciplineName: `${selectedDisciplineName} Region ${selectedRegionName}`,
+    imageName: selectedRevision.image,
     imageUrl: toDrawingUrl(selectedRevision.image),
     transform: undefined,
     imageTransform: isTransformCompatible ? revisionTransform : undefined,
@@ -185,4 +185,3 @@ export function getDefaultRegionOverlayLayer(
     blendMode: 'normal',
   }
 }
-

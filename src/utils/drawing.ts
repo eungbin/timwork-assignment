@@ -1,14 +1,18 @@
-import type { Revision, Transform } from '../types/drawing'
+import type { OverlayLayer, Revision, Transform } from '../types/drawing'
 
 const DRAWING_BASE_PATH = '/timwork/data/drawings'
 const TRANSFORM_BASE_X = 2481
 const TRANSFORM_BASE_Y = 1754
 
-type OverlayTransformContext = {
+export type OverlayTransformContext = {
   baseNaturalWidth: number
   baseNaturalHeight: number
   baseRenderedWidth: number
   baseRenderedHeight: number
+}
+
+export type RenderedOverlayLayer = OverlayLayer & {
+  computedTransform: string | undefined
 }
 
 export function byLatestRevision(a: Revision, b: Revision) {
@@ -57,4 +61,25 @@ export function getOverlayTransform(transform?: Transform, context?: OverlayTran
   const xOffset = (transform.x - centerX) * xScale
   const yOffset = (transform.y - centerY) * yScale
   return `translate(${xOffset}px, ${yOffset}px) scale(${transform.scale}) rotate(${transform.rotation}rad)`
+}
+
+export function resolveOverlayTransform(
+  overlay: OverlayLayer,
+  transformContext: OverlayTransformContext | null,
+) {
+  return (
+    overlay.imageTransform && transformContext
+      ? getOverlayTransform(overlay.imageTransform, transformContext)
+      : overlay.transform
+  )
+}
+
+export function buildRenderedOverlayLayers(
+  overlayLayers: OverlayLayer[],
+  transformContext: OverlayTransformContext | null,
+): RenderedOverlayLayer[] {
+  return overlayLayers.map((overlay) => ({
+    ...overlay,
+    computedTransform: resolveOverlayTransform(overlay, transformContext),
+  }))
 }

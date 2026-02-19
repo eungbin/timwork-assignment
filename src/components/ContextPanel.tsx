@@ -64,14 +64,6 @@ export function ContextPanel({
         )}
       </section>
 
-      <section className="mb-4.5">
-        <h3 className="mb-2 text-sm font-semibold">설계 근거 반영</h3>
-        <ul>
-          <li>탐색(왼쪽)과 표시(가운데), 컨텍스트(오른쪽)를 분리해 인지 부하를 줄였습니다.</li>
-          <li>리비전을 최신순으로 정렬해 회의 전 최신 도면 확인 시나리오를 우선 지원합니다.</li>
-          <li>오버레이 체크박스로 공종 간 간섭 확인을 빠르게 수행할 수 있도록 구성했습니다.</li>
-        </ul>
-      </section>
     </aside>
   )
 }

@@ -1,7 +1,9 @@
 import type { Drawing, Revision } from '../types/drawing'
 import { SpaceSelectorSection } from './SpaceSelectorSection'
+import { SpacePositionMap } from './SpacePositionMap'
 
 type ExplorerPanelProps = {
+  rootImageUrl: string | null
   spaces: Drawing[]
   selectedSpaceId: string | null
   disciplineNames: string[]
@@ -41,6 +43,7 @@ function Chip({
 }
 
 export function ExplorerPanel({
+  rootImageUrl,
   spaces,
   selectedSpaceId,
   disciplineNames,
@@ -62,6 +65,16 @@ export function ExplorerPanel({
       <h1 className="mb-3.5 text-lg font-semibold">도면 탐색</h1>
 
       <SpaceSelectorSection spaces={spaces} selectedSpaceId={selectedSpaceId} onSelectSpace={onSelectSpace} />
+
+      <section className="mb-4.5">
+        <h2 className="mb-2 text-sm font-semibold">공간 위치(배치도)</h2>
+        <SpacePositionMap
+          rootImageUrl={rootImageUrl}
+          spaces={spaces}
+          selectedSpaceId={selectedSpaceId}
+          onSelectSpace={onSelectSpace}
+        />
+      </section>
 
       <section className="mb-4.5">
         <h2 className="mb-2 text-sm font-semibold">공종</h2>

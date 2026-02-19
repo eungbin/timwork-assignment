@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { OverlayLayer } from '../types/drawing'
-import { getOverlayTransform } from '../utils/drawing'
+import { buildRenderedOverlayLayers } from '../utils/drawing'
 
 type DrawingCanvasPanelProps = {
   spaceName: string | null
@@ -59,18 +59,17 @@ export function DrawingCanvasPanel({
 
   const renderedOverlayLayers = useMemo(
     () =>
-      overlayLayers.map((overlay) => ({
-        ...overlay,
-        computedTransform:
-          overlay.imageTransform && baseMetrics
-            ? getOverlayTransform(overlay.imageTransform, {
-                baseNaturalWidth: baseMetrics.naturalWidth,
-                baseNaturalHeight: baseMetrics.naturalHeight,
-                baseRenderedWidth: baseMetrics.renderedWidth,
-                baseRenderedHeight: baseMetrics.renderedHeight,
-              })
-            : overlay.transform,
-      })),
+      buildRenderedOverlayLayers(
+        overlayLayers,
+        baseMetrics
+          ? {
+              baseNaturalWidth: baseMetrics.naturalWidth,
+              baseNaturalHeight: baseMetrics.naturalHeight,
+              baseRenderedWidth: baseMetrics.renderedWidth,
+              baseRenderedHeight: baseMetrics.renderedHeight,
+            }
+          : null,
+      ),
     [baseMetrics, overlayLayers],
   )
 
@@ -81,6 +80,11 @@ export function DrawingCanvasPanel({
         <p className="my-1 mb-2.5 text-slate-600">
           {disciplineName ?? '-'} / {regionName ? `Region ${regionName}` : '전체'} / {revisionVersion ?? '-'}
         </p>
+        {hideBaseImage && (
+          <p className="my-1 text-xs text-slate-500">
+            리전 단독 보기 모드입니다. 기준 도면은 정렬 계산에만 사용되고 화면에는 숨김 처리됩니다.
+          </p>
+        )}
       </div>
 
       <div className="relative flex min-h-[420px] items-center justify-center overflow-hidden rounded-lg border border-dashed border-slate-300 bg-slate-50">
@@ -115,8 +119,11 @@ export function DrawingCanvasPanel({
       </div>
 
       <div className="mt-2.5 flex justify-between text-xs text-slate-500">
-        <span>기준 도면: {baseImageName ?? '-'}</span>
-        <span>오버레이 수: {overlayLayers.length}</span>
+        <span>기준 도면: {baseImageName ? `${baseImageName}${hideBaseImage ? ' (숨김)' : ''}` : '-'}</span>
+        <span>
+          오버레이 수: {overlayLayers.length}
+          {overlayLayers.length > 0 ? ` (${overlayLayers.map((layer) => layer.disciplineName).join(', ')})` : ''}
+        </span>
       </div>
     </main>
   )

@@ -3,6 +3,7 @@ import { DrawingCanvasPanel } from './components/DrawingCanvasPanel'
 import { ExplorerPanel } from './components/ExplorerPanel'
 import { useDrawingExplorer } from './hooks/useDrawingExplorer'
 import { useMetadata } from './hooks/useMetadata'
+import { toDrawingUrl } from './utils/drawing'
 
 function App() {
   const { metadata, loading, error } = useMetadata()
@@ -47,6 +48,7 @@ function App() {
   return (
     <div className="grid h-screen grid-cols-[300px_minmax(0,1fr)_320px] gap-3 box-border p-3 max-[1300px]:h-auto max-[1300px]:min-h-screen max-[1300px]:grid-cols-1">
       <ExplorerPanel
+        rootImageUrl={toDrawingUrl(rootDrawing.image)}
         spaces={spaces}
         selectedSpaceId={selectedSpaceId}
         disciplineNames={disciplineNames}

@@ -57,6 +57,7 @@ export type Metadata = {
 
 export type OverlayLayer = {
   disciplineName: string
+  imageName: string
   imageUrl: string
   transform: string | undefined
   imageTransform?: Transform
